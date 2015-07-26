@@ -11,7 +11,7 @@
     "pluginsConfig": {
         "expandable-chapters":{},
         "mathjax":{
-            "forceSVG": true
+            "forceSVG": false
         }
     },
     "styles": {

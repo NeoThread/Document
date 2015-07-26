@@ -1,4 +1,8 @@
-hello world. I am ReadMe.
+This document is a notebook and is noted what I learned.
+If I make some mistakes in my articles, you can email to me.
+I will appreciate to your helpful reply.
+This is my [email](mailto:baxcky@gmail.com).
+
 [test](Test.md)
 ```html
 <style>
@@ -40,3 +44,7 @@ hello world. I am ReadMe.
 
 @enduml
 ```
+
+When $$(a \ne 0)$$,there are two solutions to $$(ax^2 + bx + c = 0)$$ and they are $$x = {-b \pm \sqrt{b^2-4ac} \over 2a}.$$
+
+$$(a \ne 0)$$
