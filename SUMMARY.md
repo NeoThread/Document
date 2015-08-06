@@ -7,3 +7,4 @@
 	 * [上色技巧](content/design/how-to-draw-color/introduction.md)
  * [Linux](content/linux/README.md)
 	 * [pptpd](content/linux/pptpd/introduction.md)
+ * [Machine Learning](./content/ml/README.md)

@@ -7,7 +7,7 @@
     "extension": null,
     "github": null,
     "githubHost": "https://github.com/",
-    "plugins": ["plantuml","mathjax","expandable-chapters"],
+    "plugins": ["plantuml","mathjax","expandable-chapters","mermaid"],
     "pluginsConfig": {
         "expandable-chapters":{},
         "mathjax":{

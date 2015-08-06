@@ -3,7 +3,8 @@ If I make some mistakes in my articles, you can email to me.
 I will appreciate to your helpful reply.
 This is my [email](mailto:baxcky@gmail.com).
 
-[test](Test.md)
+The following are syntex testing.
+
 ```html
 <style>
     * {
@@ -48,3 +49,11 @@ This is my [email](mailto:baxcky@gmail.com).
 When $$(a \ne 0)$$,there are two solutions to $$(ax^2 + bx + c = 0)$$ and they are $$x = {-b \pm \sqrt{b^2-4ac} \over 2a}.$$
 
 $$(a \ne 0)$$
+
+```mermaid
+graph TD;
+  A-->B;
+  A-->C;
+  B-->D;
+  C-->D;
+```
