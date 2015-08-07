@@ -8,3 +8,4 @@
  * [Linux](content/linux/README.md)
 	 * [pptpd](content/linux/pptpd/introduction.md)
  * [Machine Learning](./content/ml/README.md)
+ * [CommandLine](./content/cmd/README.md)
