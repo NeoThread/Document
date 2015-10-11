@@ -1,12 +1,10 @@
 Git Tips
 --------
 
-#### First Part
+#### What's different between ~ and ^
+![img](./git_parent.png)
 
-* What's different between ~ and ^
-	![img](./git_parent.png)
-
-* Git log
+#### Git log
 
 To see all commits from begin to current(A->B).
 ```bash
@@ -25,15 +23,15 @@ graph TD;
 	B-->C;
 ```
 
-* Git show #commit_id
+#### Git show #commit_id
 
 To see the commit's detail.	
 
-* Git reset [HEAD file]
+#### Git reset [HEAD file]
 
 If you don't want to track the unstaged file, you can use `git reset [HEAD file]` to untrack.
 
-* Git reset HEAD~1
+#### Git reset HEAD~1
 
 If you want to drop the last commit and the last change in that commit:
 
@@ -44,16 +42,16 @@ git checkout -- the_change_file
 git checkout -- .
 ```
 
-NOTE: The commit `HEAD~1` will be keep and all the commits after `HEAD~1` will be dropped if you checkout files.
+NOTE: The commit `HEAD~1` will be keep and all the changes in those commits after `HEAD~1` will be dropped if you checkout files.
 
 
-* Git revert #commit_id
+#### Git revert #commit_id
 
 To create a new commit that combines the commit before `#commit_id` and the commits after `#commit_id`.
 
 If you meet conflict problem, you need to modify files and commit to finish the revert action.
 
 
-* Git ls-tree master submodule_dir
+#### Git ls-tree master submodule_dir
 
 To see the `commit_id` about `submodule_dir` in master
