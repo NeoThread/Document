@@ -55,3 +55,14 @@ If you meet conflict problem, you need to modify files and commit to finish the 
 #### Git ls-tree master submodule_dir
 
 To see the `commit_id` about `submodule_dir` in master
+
+### Git rebase -i #commit_id
+
+To choose the commits you want after the commit `#commit_id`.
+
+If you don't want to keep `D` commit, you should delete that line `pick D xxx` and save it.
+
+```
+pick D xxx
+pick E ooo
+```
