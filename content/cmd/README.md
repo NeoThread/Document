@@ -52,3 +52,23 @@ sed -i '1s/^/${content}/' files
 diff -rupN origin new > original.patch
 patch -s -p0 <original.patch
 ```
+
+#### du
+
+Too lookup the size of each directory
+
+```
+du -sh dir
+```
+
+#### Count the number of files
+
+```
+find . -type f | wc -l
+```
+
+#### Check processes which used the dir if mounting
+
+```
+fuser -muv dir
+```

@@ -31,9 +31,10 @@ To see the commit's detail.
 
 If you don't want to track the unstaged file, you can use `git reset [HEAD file]` to untrack.
 
-#### Git reset HEAD~1
+#### Git reset #commit_id
 
-If you want to drop the last commit and the last change in that commit:
+No matter what we do after `#commit_id`, we reset thoses commits to be that `#commit_id` commit.
+Remeber to use checkout and those changed files' content will consist with last commit.
 
 ```
 git reset HEAD~1
@@ -42,12 +43,13 @@ git checkout -- the_change_file
 git checkout -- .
 ```
 
-NOTE: The commit `HEAD~1` will be keep and all the changes in those commits after `HEAD~1` will be dropped if you checkout files.
+NOTE: The commit `HEAD~1` will be keep and all the changes after `HEAD~1` will be dropped if you checkout files.
 
 
 #### Git revert #commit_id
 
-To create a new commit that combines the commit before `#commit_id` and the commits after `#commit_id`.
+To create a new commit that revert `#commit_id`. 
+It means that the additons or substractions in `#commit_id` will be oppositive ones in the new commit. 
 
 If you meet conflict problem, you need to modify files and commit to finish the revert action.
 
@@ -56,7 +58,7 @@ If you meet conflict problem, you need to modify files and commit to finish the 
 
 To see the `commit_id` about `submodule_dir` in master
 
-### Git rebase -i #commit_id
+#### Git rebase -i #commit_id
 
 To choose the commits you want after the commit `#commit_id`.
 
