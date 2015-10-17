@@ -72,3 +72,9 @@ find . -type f | wc -l
 ```
 fuser -muv dir
 ```
+
+#### Write the buffer back to disk
+
+```
+sync
+```
