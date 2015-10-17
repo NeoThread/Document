@@ -78,3 +78,9 @@ fuser -muv dir
 ```
 sync
 ```
+
+#### Rsync usage (increasing backup)
+
+```
+rsync -artlHSqP --delete -e "ssh -p #port" dir user@remote_ip:/path/to/dir
+```
