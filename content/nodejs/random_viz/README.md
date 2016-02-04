@@ -1,5 +1,6 @@
 [reference from](http://hackaday.com/2015/12/28/v8-javascript-fixes-horrible-random-number-generator/)
-根據 V8 官方描述，V8 用 PRNG (pseudo-random number generator) 實作 `Math.random()` 是十分糟糕的，V8 是 Google 為了 Chrome 所開發的 Javascript 引擎，而現在也用在 Node.js 以及其他地方，但是近六年來這樣的狀況卻是鮮少被注意，如今這問題已經有被提出以及改善。
+
+根據 V8 官方描述，V8 用 PRNG (pseudo-random number generator) 實作 `Math.random()` 是十分糟糕的，V8 是 Google 為了 Chrome 所開發的 Javascript 引擎，除此之外也用在 Node.js 以及其他地方，但是近六年來這樣的狀況卻是鮮少被注意，如今這問題已經有被提出以及改善。
 
 In this article, I’ll take you on a trip through the math of randomness, through to pseudo-randomness, and then loop back around and cover the history of the bad PRNG and its replacements. If you’ve been waiting for an excuse to get into PRNGs, you can use this bizarre fail and its fix as your excuse.
 
@@ -27,21 +28,15 @@ John von Neumann 不用多說就是一個天才。他對於隨機變數有深入
 這也就是 von Neumann 所提到的＂...沒有所謂的隨機數字－只有一些方法可以去隨機產生數字...＂如果我們知道一種方法，這個方法可以數學方式從狀態 St 到 St+1 精準預測到時間 t 的結果，那麼明天的所有結果也就不可能無法預測。
 
 ###PRNGS?
-If you can write down how St evolves over time, then your function isn’t random, thus all of the computer-implemented PRNGs aren’t random either. (That’s the “pseudo-“.) Then what are they? What should they do, if they can’t produce randomness? Here’s a list of three criteria, where each one builds on the previous ones.
 如果你可以寫下一段時間 St 的內容，那麼你設計的函數就不是隨機，因此所有計算機實作出來的 PRNGs 都不是隨機。這也是為什麼要加上虛擬的前綴詞。那麼他們又是甚麼，如果他們不能產生隨機，他們可以拿來做甚麼呢？這裡有三個準則，每個都建立在前一個準則上。
 
 [img histo]
 
 如果要拿 PRNG 來做點小事情的話，你應該會想要輸出他所有可能的值。就像你拿到 8-bit PRNG，[1] 你會想要透過他取出在 0 到 255 的每個值，基於如此，[2] 你會希望每個可能的結果都有相同的出現頻率 (以一個 uniform PRNG 來說)，最後，[3] 即使你有著前幾次的結果，你仍然無法預測出下一次結果 (xt+1)。
 
-A PRNG that covers all possible values is said to have “full period”, and one where all outcomes occur with equal frequency is “equi-distributed”. 
-These criteria are fairly straightforward to work out in math or to test — just take a lot of values and see if there are too many of one or none of another. 
-這些準則對於數學或測試來說是相當的簡單明瞭－
-If a PRNG does’t cover all the values, it can’t really be evenly distributed. 
-If it’s not evenly distributed, you’ll be able to have a limited kind of predictive ability; if five comes up too often, just predict five.
-一個 PRNG 涵蓋了所有可能出現的值，可說是 "full period"，然而所有的結果出現的頻率一致，我們可以說是 "equi-distributed"。
+一個 PRNG 涵蓋了所有可能出現的值，可說是 "full period"，然而所有的結果出現的頻率一致，我們可以說是 "equi-distributed"。這些準則對於數學或測試來說是相當的簡單明瞭－就只需要多幾次結果，再看看某幾個值出現很多次或者根本就沒出現。如果這個 PRNG 沒有涵蓋所有可能出現的值，那麼他就不是平均分布。如果他不是平均分布，你就可以有前提的預測；如果說 5 出現的頻率太高，就直接猜 5 就好。
 
-Predictability can be even more subtle, though, and there are a bunch of interesting statistical tests. Or course, “predictability” is a bit of a misnomer. We know how the state updates, so the word “predictability” only really makes sense if we pretend that we don’t already know St+1, and only focus on the history of the x values. We’re in von Neumann’s “state of sin” after all.
+用預測來說是有點微妙，在許許多多統計測試方法中，預測這個字是有些用詞不當。我們知道狀態會如何改變，只有當我們假裝我們不知道 St+1 的結果，並且只注意在 x 的過去數據，才能說是預測。但最終還是落入 von Neumann 的 "sin的狀態" 中。
 
 ###AND JAVASCRIPT
 Which brings us to V8 Javascript’s Math.random(). For the last six years, the algorithm that’s been used has been pretty horrible. So think of our three criteria presented above and have a look at the following plot of its output. (Or look up at the banner again.) Which desired criteria fail?
