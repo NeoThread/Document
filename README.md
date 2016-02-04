@@ -50,6 +50,7 @@ When $$(a \ne 0)$$,there are two solutions to $$(ax^2 + bx + c = 0)$$ and they a
 
 $$(a \ne 0)$$
 
+
 ```mermaid
 graph TD;
   A-->B;
@@ -57,3 +58,37 @@ graph TD;
   B-->D;
   C-->D;
 ```
+
+$$\frac{n!}{k!(n-k)!} = \binom{n}{k}$$
+$$\frac{n!}{k!(n-k)!} = {n \choose k}$$
+
+$$\cfrac{a+\cfrac{a+b}{c}}{c}$$
+
+$$\begin{array}{ll}
+  a & b \\
+  c & d
+\end{array}$$
+$$\sum_{i=1}^{n} a_i$$
+$$\displaystyle\sum_{i=o}^{n} I_n$$
+$$\int_{0}^{\infty} e^{-x}dx$$
+$$\int\limits_{0}^{\infty} e^{-x}\,dx$$
+$$
+	{[{-1},{99}]}
+	{[{1000},{-1})}
+$$
+$$
+\begin{smallmatrix}
+a&b \\
+c&d
+\end{smallmatrix}
+\mathfrak{ABC} 
+a''
+\stackrel\frown{abc}
+\begin{cases} 
+  1 			& \text{if } x \geq 0 \\
+  0       & \text{if } x < 0
+\end{cases}
+$$
+$$
+\ddots
+$$

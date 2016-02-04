@@ -17,3 +17,11 @@ Mechine Learning
 
 * [Face Alignment at 3000 FPS via Regressing Local Binary Features](http://home.ustc.edu.cn/~sqren/)
 	- [Facial Point Annotations](http://ibug.doc.ic.ac.uk/resources/facial-point-annotations/)
+
+----
+
+### Terms
+
+#### Precision, recall, false positive, and true positive
+
+![precision&recall](./Precisionrecall.svg)

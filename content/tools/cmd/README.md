@@ -84,3 +84,16 @@ sync
 ```
 rsync -artlHSqP --delete -e "ssh -p #port" dir user@remote_ip:/path/to/dir
 ```
+
+#### Merge jpegs to pdf
+
+```
+sudo apt-get install imagemagick
+convert *.jpg pictures.pdf
+```
+
+#### Find filename(recurisive)
+
+```
+find * -name "name" -type f
+```

@@ -60,7 +60,7 @@ endif()
 #### Basic Instructions
 
 * list [line number]
-	- To show the code.
+	- To show the code.(It needs debug symbols)
 * break [line number or function name]
 	- To set breakpoint on your code.
 * info break
@@ -79,3 +79,46 @@ endif()
 	- If your program stop at a breakpoint, you should use `continue` to continue your program.
 * quit
 	- Type `quit` to quit this program.
+
+#### How to set break points
+
+* find the line you want to set
+	- layout asm
+	- disas main # or disas function_name or disas 0x00943032,+10
+	- break *main+24
+* check what breakpoints you already set
+	- info break
+* delete breakpoints
+	- delete num
+
+#### Show some information
+
+* show registers
+	- layout reg
+	- info reg
+* show the top of stack
+	- x/40wx $esp
+* show the register
+	- p/x $eip
+* show the value at this address in string
+	- x/s 0x8032947
+* show the value at this address in instruction format
+	- x/i 0x00897654
+
+#### Step in ,step over and reverse
+
+* First to record the information to reverse
+	- record
+* step into
+	- s
+* step over
+	- n
+* step into by each instruction
+	- si
+* step over by each instruction
+	- ni
+* if you want to reverse
+	- rs
+	- rn
+	- rsi
+	- rni
