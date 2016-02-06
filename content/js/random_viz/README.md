@@ -55,6 +55,7 @@ John von Neumann 不用多說就是一個天才。他對於隨機變數有深入
 
 
 ![img birthday-cake](birthday-cake.jpg)
+
 這是一個實際上會遇到的問題
 
 再加上，每一次所選擇的週期都與開始的狀態過短。也就是說，這不是一個很隨機的狀態選擇，PRNG 相對所產生的數字範圍也會來的窄。目前 2^32 個數字看起來很大，當你了解到數字的數量其實是少了 2^20 倍時，你將近少了 99.999905% 的範圍。如果又遇到 [Birthday problem](https://en.wikipedia.org/wiki/Birthday_problem)，就又會讓這個問題更加嚴重。
@@ -86,11 +87,11 @@ uint32_t mwc1616() {
   state1 = 30903 * (state1 & 0xffff) + (state1 << 16);
   return state0 << 16 + (state1 & 0xffff);
 }
-```cpp
+```
 
 還有 XorShift128+ 的程式碼 (好的)：
 
-```
+```cpp
 uint64_t state0 = 1;
 uint64_t state1 = 2;
 uint64_t xorshift128plus() {
