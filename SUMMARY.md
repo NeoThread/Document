@@ -1,9 +1,10 @@
  # Summary
 
  * [This Document](README.md)
- * [Nodejs](content/nodejs/README.md)
-	 * [Gitbook](content/nodejs/gitbook/README.md)
-	 * [NPM](content/nodejs/npm/README.md)
+ * [Javascript](content/js/README.md)
+	 * [Gitbook](content/js/gitbook/README.md)
+	 * [NPM](content/js/npm/README.md)
+	 * [Random in V8](content/js/random_viz/README.md)
  * [Python](content/python/README.md)
 	 * [pyenv](content/python/pyenv/README.md)
  * [Design](content/design/README.md)
