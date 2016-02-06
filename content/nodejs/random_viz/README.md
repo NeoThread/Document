@@ -4,9 +4,9 @@
 
 In this article, I’ll take you on a trip through the math of randomness, through to pseudo-randomness, and then loop back around and cover the history of the bad PRNG and its replacements. If you’ve been waiting for an excuse to get into PRNGs, you can use this bizarre fail and its fix as your excuse.
 
-一開始，來看一句名言：
+一開始，來看一段名言：
 
-	許多人認為隨機數的算數產生方法可以是 `sin` 函數來呈現，但這其中有個問題常被提出來，沒有一個數是真正的隨機產生，你只能用一些方法來隨機產生一些數，但是這些方法都不是嚴謹的算術方法。 - John von Neumann
+	許多人認為隨機數的算數產生方法可以是 `sin` 函數來呈現，但這其中有個問題常被提出來，沒有所謂的隨機數，你只能用一些方法來隨機產生一些數，但是這些方法都不是嚴謹的算術方法。 - John von Neumann
 
 John von Neumann 不用多說就是一個天才。他對於隨機變數有深入且重要的說明以及相關的數學定義。
 
@@ -15,65 +15,69 @@ John von Neumann 不用多說就是一個天才。他對於隨機變數有深入
 
 在進階機率的課程上所學的是以數學家觀點來看隨機，所以對於 `random number` 任何上過課的人應曾經苦惱過，但這不是賣弄學問，這是基礎。
 
-數字不是隨機的。從以前到現在，我們都知道他們是甚麼。我們用數字來計數。我們甚至把數字擴展到不可數的部分以及非實數的部分。但是有個部分數字無法表示，那就是隨機。7 還是 7，從亞里斯多德到現在都是一樣的。畢竟，沒有隨機的觀點，數字更容易用在計數上。
+數字不是隨機的。從以前到現在，我們都知道他們是甚麼。我們用數字來計數。我們甚至把數字擴展到不可數的部分以及非實數的部分。但是有個部分數字無法表示，那就是隨機。7 還是 7，從亞里斯多德的時代到現在都是一樣的。畢竟，沒有隨機的觀點，數字更容易用在計數上。
 
 [img random_variable]
 
-如果想要用數學角度了解隨機，那麼就必須知道函數。我們可以從函數得到數字，這些數字不是隨機的，他們只是從隨機過程得到的結果。這個函數需要一個隨機性質的參數來產生。數學家曾表示 `隨機變數` 是一個函數，而他的值是跟世界狀態是有相關的。如果說在時間 `t` 跟世界的相關狀態就是 `St`，那麼隨機變數就是 `xt = f(St)`
+如果想要用數學角度了解隨機，那麼就必須知道函數。我們可以從函數得到數字，這些數字不是隨機的，他們只是從隨機過程得到的結果。這個函數需要一個隨機性質的參數來產生。數學家曾表示 `隨機變數` 是一個函數，而他的值跟世界狀態是有相關的。如果說在時間 `t` 世界的相關狀態就是 `St`，那麼隨機變數就是 `xt = f(St)`
 
 如果從現在 (time t) 到明天 (time t+1) 的世界狀態是不可預測的話，那麼明天所得到的隨機變數 x 也將不可預測。如果你說得出未來世界可能的狀態以及機率，那麼你也可以算出未來 x 的值。
 
 現在假設我擲一個骰子，舉例來說，我可以非常確定各個面朝上的狀態在世界中的機率是多少，但我不能說我明天即將擲出三或四的點數。一旦擲出，所得到的就只是簡單的數字，4 永遠就是 4。
 
-這也就是 von Neumann 所提到的＂...沒有所謂的隨機數字－只有一些方法可以去隨機產生數字...＂如果我們知道一種方法，這個方法可以數學方式從狀態 St 到 St+1 精準預測到時間 t 的結果，那麼明天的所有結果也就不可能無法預測。
+這也就是 von Neumann 所提到的＂...沒有所謂的隨機數字－只有一些方法可以去隨機產生數字...＂如果我們知道一種方法，這個方法可以數學方式從狀態 St 到 St+1 精準預測到時間 t 的結果，那麼明天的所有結果也就不會無法預測。
 
 ###PRNGS?
-如果你可以寫下一段時間 St 的內容，那麼你設計的函數就不是隨機，因此所有計算機實作出來的 PRNGs 都不是隨機。這也是為什麼要加上虛擬的前綴詞。那麼他們又是甚麼，如果他們不能產生隨機，他們可以拿來做甚麼呢？這裡有三個準則，每個都建立在前一個準則上。
+如果你可以寫下一段時間 St 的結果，那麼你設計的函數就不是隨機，因此所有計算機實作出來的 PRNGs 都不是隨機。這也是為什麼要加上虛擬的前綴詞。那麼他們又是甚麼，如果他們不能產生隨機，他們可以拿來做甚麼呢？這裡有三個準則，每個都建立在前一個準則上。
 
 [img histo]
 
 如果要拿 PRNG 來做點小事情的話，你應該會想要輸出他所有可能的值。就像你拿到 8-bit PRNG，[1] 你會想要透過他取出在 0 到 255 的每個值，基於如此，[2] 你會希望每個可能的結果都有相同的出現頻率 (以一個 uniform PRNG 來說)，最後，[3] 即使你有著前幾次的結果，你仍然無法預測出下一次結果 (xt+1)。
 
-一個 PRNG 涵蓋了所有可能出現的值，可說是 "full period"，然而所有的結果出現的頻率一致，我們可以說是 "equi-distributed"。這些準則對於數學或測試來說是相當的簡單明瞭－就只需要多幾次結果，再看看某幾個值出現很多次或者根本就沒出現。如果這個 PRNG 沒有涵蓋所有可能出現的值，那麼他就不是平均分布。如果他不是平均分布，你就可以有前提的預測；如果說 5 出現的頻率太高，就直接猜 5 就好。
+一個 PRNG 涵蓋了所有可能出現的值，可說是 "full period"，然而所有的結果出現的頻率一致，我們可以說是 "equi-distributed"。這些準則對於數學或測試來說是相當的簡單明瞭－就只需要多幾次結果，再看看某幾個值出現很多次或者根本就沒出現。如果這個 PRNG 沒有涵蓋所有可能出現的值，那麼他就不是平均分布。如果他不是平均分布，你就可以作出有前提的預測；如果說 5 出現的頻率太高，就直接猜 5 就好。
 
-用預測來說是有點微妙，在許許多多統計測試方法中，預測這個字是有些用詞不當。我們知道狀態會如何改變，只有當我們假裝我們不知道 St+1 的結果，並且只注意在 x 的過去數據，才能說是預測。但最終還是落入 von Neumann 的 "sin的狀態" 中。
+用預測來說是有點微妙，在許許多多統計測試方法中，預測這個字是有些用詞不當。我們知道狀態會如何改變，只有當我們假裝我們不知道 St+1 的結果，並且只注意在 x 的過去數據，才能說是預測。但最終還是落入 von Neumann 的 "sin函數" 論調中。
 
 ###AND JAVASCRIPT
-Which brings us to V8 Javascript’s Math.random(). For the last six years, the algorithm that’s been used has been pretty horrible. So think of our three criteria presented above and have a look at the following plot of its output. (Or look up at the banner again.) Which desired criteria fail?
+接下來看到 V8 Javascript 的 `Math.random()`。近六年來，所用的演算法糟透了。我們可以看看下面所產生的圖表，再想想那些不滿足剛剛所提到的三大準則？
 
-Untitled drawing
+[img Untitled drawing]
 
-If you said “full-period” you were right. There are holes where random numbers just don’t occur, although a conclusive test requires more than a plot. And if you said “equi-distribution” you were also right. Have a look at those dark bands. Those are numbers that occur more frequently than they should.
+如果你認為是 "full-period"，你說對了。看到圖上白色像素的部分就是沒有出現數字，雖然說可能還是需要產生更多的圖表來驗證這樣的結論。如果你是認為是 "equi-distribution"，那麼你也是對的。看到圖上有黑色類似線狀的紋理，就是數字沒有平均分布的結果。
 
-Finally, if you said “unpredictability” you were mostly right. The “good” news is that the bands are basically horizontal stripes, which means that even though some y-axis values are over-represented, they don’t seem to depend on the x-axis value. But because the y-axis values are unconditionally poorly distributed, you can predict in the regions with the dark bands, and your prediction will be better than chance.
+最後，如果你是認為 "unpredictability"，你說的可能比上面還要來的好。這是因為圖上的黑色線狀紋理很顯然的呈現出水平的分布，意思是產生出的數字跟 y 軸有很明顯的相關，但 x 軸卻不是如此。由於在 y 軸分布的結果不是很好，所以你在預測下一個數字時，你可以選擇分布較密的那些數字，會比你亂猜的結果來的好。
 
-So of three possible criterion to judge a PRNG, this one scores a zero, based on simply looking at a plot of some values. The code that generated the images is here. (Test your browser’s PRNG.)
+基本上根據產生的圖表是沒有滿足任何一項的準則。
+[產生圖片的程式](#)。 (可以測試你的瀏覽器的 PRNG)
 
-To quantify the above observations, the official V8 Javascript post that I linked above notes that the coverage is only 232 values out of the possible 252 uniformly-distributed values that a 64-bit float can represent. This is a huge failure of the “full-period” criterion.
+將上述的觀察結果量化，以 64-bit float表示的 2^52 個平均分布的數字，上述連結的方法也只涵蓋了 2^32 個。當然這絕對不滿足 "full-period" 準則。
 
-birthday-cake
-This is actually a problem
-Additionally, there are short cycles that depend on the particular choice of the starting state. That is, for unlucky state choices, the period before the PRNG repeats is even shorter. Now 232 possible numbers seems like a lot, until you realize that you’re short of the available values by a factor of 220*. That is, you’re missing 99.999905% of the space. And the Birthday problem makes this shortfall a big deal.
 
-Better tests of predictability in PRNGs will look at many higher dimensions, and test if the outcomes are dependent on each other at various lags and with varying amounts of previous output used to predict the next value. TestU01 is now the state-of-the-art in PRNG testing, and is easily downloadable so you can put your favorite PRNGs to the test if you’d like. Other, perennial favorites include the original Diehard battery of tests (get it?) and the improved Dieharder battery (will the puns stop?!). But this PRNG is so bad-looking on its face that there’s no need to beat the dead horse.
+[img birthday-cake]
+這是一個實際上的問題
+
+再加上，每一次選擇的週期都與開始的狀態過短。也就是說，這不是一個很隨機的狀態選擇，PRNG 相對所產生的數字範圍也會來的窄。目前 2^32 個數字看起來很大，當你了解到數字的數量其實是少了 2^20 倍時，你將近少了 99.999905% 的範圍。如果又遇到 Birthday problem，就又會讓這個問題更加嚴重。
+
+對於 PRNGs 較佳的預測測試會希望在高維度的資料上進行，看看測試結果是否彼此都有不同的落差或是在這些不同結果中是否能夠拿來做預測。
+
+TestU01 是目前最新的 PRNG 測試工具，只要載下來，你就可以將你想要測試的 PRNGs 用這個工具執行看看。另外個人最愛的工具還有 `Diehard battery of tests` 以及 `Improved Dieharder battery`。但事實上 PRNG 是一個不好理解的部分，所以在這裡就不多細談。
 
 ###WHAT HAPPENED?
-There’s a great writeup of the whole debacle in the blog of [Mike Malone], the CTO of Betable. His company used Math.random() in Node.js on their servers to assign per-session tokens to users. They thought they were fine, because the chances of a collision were vanishingly small if the PRNG was doing its job. They estimated that they’d have a one-in-six-billion chance of a collision in the next 300 years. (They’re wrong — they can’t get more values out of the PRNG than the full state cycle, which is 264. But they’re basically right in that we shouldn’t see a collision in our lifetimes.)
+Betable 首席技術長 Mike Malone 在他的 blog 中有提到一個實際案例。他公司的伺服器中使用了 Node.js 的 Math.random() 來產生每個 session 的 token 給使用者.他們覺得這是可行的，因為他們認為使用 PRNG 來實作， token 重複的機率幾乎是微乎其微。他們估計在未來的三百年發生重複的機率約六十億分之一。(但他們錯了－雖然說在有生之年可能不會看到重複，但是他們不可能在有限週期的狀態中得到在 2^64 範圍內的任一個數字。)
 
-In fact, they had a collision in March on a system they rolled out in February. Oops! This lead [Mike] to do a very in-depth analysis of the flawed PRNG, which is worth a read. He also points out the prophetic comment from [Dean McNamee] on the code change that introduced the flawed PRNG:
+事實上，在二月推出的系統上他們在三月的時候就遇到了重複的狀況。
+這也讓 [Mike] 去深入研究有缺陷的 PRNG。他指出一個有先見之明的評論，[Dean McNamee] 在 v8 有個針對修正缺陷 PRNG 的 issue 上說：
 
-I would have gone with Mersenne Twister since it is what everyone else uses (python, ruby, etc).
+	我原本想用 Mersenne Twister 實作，因為其他語言也都是用這個演算法 (python、ruby 等等)。
 
-Indeed.
-
-The story of the algorithm that got chosen, “MWC1616” is even stranger. It seems that [George Marsaglia], the author of the original Diehard tests above, and developer of the Mersenne Twister, posted up one version of this routine on Jan 12, 1999 and then an improved version on Jan. 20. People who read the thread to the end got the good one, and that includes Numerical Recipes and many others. Somehow, the poor folks implementing the PRNG for V8 Javascript just got the wrong one.
+這個 issue 的修正是使用一個滿奇怪的演算法 "MWC1616"。"MWC1616" 的作者是一位叫 [George Marsaglia] ，, 他也是上面提到測試工具 Diehard tests 的作者，也是 Mersenne Twister 演算法的開法者，他在 1999 年一月十二號提出關於這個演算法的一個版本，另外在一月二十號又提出了一個改進的版本。有人參考這篇文以及一些回覆又實作出一個更好的版本，這個最後版本還包含數值分析等等的方法。但是有些針對 V8 Javascript 的 PRNG 修正的版本卻不是使用最好的方法實作。
 
 ###WHAT’S NEXT?
-But the bug was found and patched. In the end, V8 Javascript is going with an XorShift generator, which seems to be state-of-the-art and passes all of the statistical tests in all of the test suites we mentioned above. In addition, it’s extremely fast, requiring only a few bit-shift and XOR operations. It’s new, which is always a problem, but it tests extremely well.
+後來這個 bug 還是被解決了。最終 V8 Javascript 是使用 XorShift generator 的演算法，應該是目前最新技術，而且都有通過上面提到的測試工具。再加上他很快，只需要一些 bit-shift 以及 XOR 的運算。目前這個演算法還很新，可能還有一些問題，但是以目前測試來說，結果相當不錯。
 
-XorShift128+ was also merged into Mozilla and Safari as well as Chrome. You should be getting better random numbers soon.
+就跟 Chrome 一樣，Mozilla 跟 Safari 也都將 XorShift128+ 合併進原始碼，很快你將會有不錯的隨機方法。
 
-If you want to play around with these PRNGs, here’s the code for MWC1616 (no!):
+如果你想了解關於 PRNGs ，這裡有一段 MWC1616 的程式碼 (不好的)：
 
 ```
 uint32_t state0 = 1;
@@ -85,7 +89,7 @@ uint32_t mwc1616() {
 }
 ```
 
-and here’s the same for XorShift128+ (yay!):
+還有 XorShift128+ 的程式碼 (好的)：
 
 ```
 uint64_t state0 = 1;
@@ -101,4 +105,4 @@ uint64_t xorshift128plus() {
 }
 ```
 
-And if all this pseudo-RNG stuff has got you craving for some real, honest-to-goodness, no-knowledge-of-the-state-update-function, randomness you’ve got a couple of good options: use radioactive decay or combine radio noise and quantum tunneling. Finally, if you’d like your randomness certified, check out the US National Institute of Standards and Technology’s Randomness Beacon.
+如果 PRNG 相關資訊已經引起你追求更真實的、更公正的隨機性，而且這個隨機性沒有所謂的已知狀態的話，有幾個不錯的方法你可以選擇：放射性衰變、無線電雜訊以及量子隧道。最後如果你想要的你的隨機性是被公認的，可以參考美國NIST的隨機源 (Randomness Beacon)。
