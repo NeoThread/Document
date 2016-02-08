@@ -13,6 +13,7 @@
 	 * [pptpd](content/linux/pptpd/README.md)
 	 * [laravel](content/linux/laravel/README.md)
 	 * [centos](content/linux/centos/README.md)
+	 * [a minimal x86 kernel](content/linux/min_kernel/README.md)
  * [Tools](content/tools/README.md)
 	 * [GDB](content/tools/gdb/README.md)
 	 * [CommandLine](./content/tools/cmd/README.md)
