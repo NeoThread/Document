@@ -6,7 +6,7 @@
 
 我會盡量讓說明越詳細越好，並且讓程式碼盡可能的簡潔。如果你有任何的問題、建議或是 issues，你可以留言或是在 Github 上建立 issue。這些原始碼也都公開放在 Github 上。
 
-更正：我們不再使用 1GiB 的 pages，因為這會有些相容性問題。而 identity mapping 會透過 2MiB pages 來完成。
+更正：我們不再使用 1GiB 大小的 pages，因為這會有些相容性問題。所以 identity mapping 會透過 2MiB 大小的 pages 來完成。
 
 (identity mapping：linear address 直接對應到 physical address)
 
@@ -83,7 +83,7 @@ check_multiboot:
 
 ### CPUID check
 
-CPUID is a CPU instruction that can be used to get various information about the CPU. But not every processor supports it. CPUID detection is quite laborious, so we just copy a detection function from the OSDev wiki:
+CPUID 是一個 CPU 指令，可以被用來去得到 CPU 相關資訊，但並不是每個 processor 有支援。其實要寫一個 CPUID 有無支援是有點困難的，所以我們直接從 OSDev wiki 複製下來：
 
 ```
 check_cpuid:
@@ -123,13 +123,13 @@ check_cpuid:
     jmp error
 ```
 
-Basically, the CPUID instruction is supported if we can flip some bit in the FLAGS register. We can't operate on the flags register directly, so we need to load it into some general purpose register such as eax first. The only way to do this is to push the FLAGS register on the stack through the pushfd instruction and then pop it into eax. Equally, we write it back through push ecx and popfd. To flip the bit we use the xor instruction to perform an exclusive OR. Finally we compare the two values and jump to .no_cpuid if both are equal (je – “jump if equal”). The .no_cpuid code just jumps to the error function with error code 1.
+基本上，檢查 CPUID 指令有無支援，就是去修改 FLAGS 暫存器的某個 bit (0->1, 1->0)，如果可以成功改值，就是有支援。但我們並不能直接對 flags 暫存器操作，所以我們只能先將他載入到 general purpose register 像是 eax，如何達成？唯一做法就是先用 `pushfd` 指令把 FLAGS 暫存器 push 到 stack 中，接著再 `pop` 到 `eax` 。同樣的，我們要寫回 FLAGS 暫存器則是要透過像是 push ecx 以及 popfd 指令來完成。還有如何去改特定的 bit (0->1, 1->0) 呢？在這我們使用 xor 指令去完成一個互斥或的動作 (遇到 true 改值，反之保留)。最後我們再去比較 eax 跟 ecx 的值，如果相等的話，就跳去 .no_cpuid (je - "jump if equal")。.no_cupid 會把錯誤碼 (=1) 傳到 error function 並且跳去顯示。
 
-Don't worry, you don't need to understand the details.
+如果不懂不用擔心，你暫時還不需要去了解細節。
 
 ### Long Mode check
 
-Now we can use CPUID to detect whether long mode can be used. I use code from OSDev again:
+現在我們可以使用 CPUID 指令來測試是否能用 long mode。這邊程式碼是從 OSDev 複製下來： 
 
 ```
 check_long_mode:
@@ -150,13 +150,13 @@ check_long_mode:
     jmp error
 ```
 
-Like many low-level things, CPUID is a bit strange. Instead of taking a parameter, the cpuid instruction implicitely uses the eax register as argument. To test if long mode is available, we need to call cpuid with 0x80000001 in eax. This loads some information to the ecx and edx registers. Long mode is supported if the 29th bit in edx is set. Wikipedia has detailed information.
+CPUID 跟一些底層的機制很像，有些奇妙設計。像是 CPUID 看起來不需要參數，但是 cpuid 指令本身其實還是會把 eax 暫存器當引數去執行。要測試 long mode 能不能用，我們只需要把 eax 設定成 0x80000001 並且呼叫 cpuid 指令， 接著這道指令會把一些資訊載入到 ecx 以及 edx 暫存器，如果可以支援 long mode，那麼 edx 的第 29 個 bit 就會被設定起來，詳細可以看 Wikipedia。
 
-If you look at the assembly above, you'll probably notice that we call cpuid twice. The reason is that the CPUID command started with only a few functions and was extended over time. So old processors may not know the 0x80000001 argument at all. To test if they do, we need to invoke cpuid with 0x80000000 in eax first. It returns the highest supported parameter value in eax. If it's at least 0x80000001, we can test for long mode as described above. Else the CPU is old and doesn't know what long mode is either. In that case, we directly jump to .no_long_mode through the jb instruction (“jump if below”).
+如果你有看上面的程式碼，那麼你會發現我們呼叫了 cpuid 兩次。原因是因為 CPUID 指令只能一次執行一個功能，所以不同功能要在下一次執行。又由於有些較舊的 processors 其實是不支援 0x80000001 的引數，所以在第一次呼叫中，為了要測試有無支援，會先將 eax 設定成 0x80000000 再呼叫 cpuid，他會將結果設定在 eax 中，如果結果大於等於 0x80000001，那麼我們可以用上述方法繼續測試 long mode，反之就是不支援了，這裡是使用 jb ("jump if below") 指令跳去 .no_long_mode。
 
 ### Putting it together
 
-We just call these check functions right after start:
+接下來我們把這些檢查 functions 接續 start 後面：
 
 ```
 global _start
@@ -174,47 +174,69 @@ _start:
     ...
 ```
 
-When the CPU doesn't support a needed feature, we get an error message with an unique error code. Now we can start the real work.
+當 CPU 有功能不支援時，我們就會得到錯誤訊息。現在我們總算可以進行重要的步驟了。
 
 ### Paging
 
-Paging is a memory management scheme that separates virtual and physical memory. The address space is split into equal sized pages and a page table specifies which virtual page points to which physical page. If you never heard of paging, you might want to look at the paging introduction (PDF) of the Three Easy Pieces OS book.
+Paging 是一個記憶體管理的機制，這個機制區分了虛擬記憶體和實體記憶體，並且把 address space 切分成許多相等大小的 page，再由 page talbe 去描述這些虛擬 page 他們所相對應的實體 page。 如果你從未聽過 paging，你可能需要去看 Three Easy Pieces OS 書中的 paging 相關介紹。
 
-In long mode, x86 uses a page size of 4096 bytes and a 4 level page table that consists of:
+在 long mode 中，x86 一個 page 大小為 4096 bytes，所用到的 page table 是四層架構，組成如下：
 
-* the Page-Map Level-4 Table (PML4),
-* the Page-Directory Pointer Table (PDP),
-* the Page-Directory Table (PD),
-* and the Page Table (PT).
+* Page-Map Level-4 Table (PML4)
+* Page-Directory Pointer Table (PDP)
+* Page-Directory Table (PD)
+* Page Table (PT)
 
-As I don't like these names, I will call them P4, P3, P2, and P1 from now on.
+因為我不太喜歡這些名字，從現在我會用 P4、P3、P2、P1 來稱呼這些 page table。
 
-Each page table contains 512 entries and one entry is 8 bytes, so they fit exactly in one page (512*8 = 4096). To translate a virtual address to a physical address the CPU1 will do the following2:
+每個 page table 都有 512 個 entries，然後每個 entry 大小都是 8 bytes，所以一個 page table 大小剛好為一個 page (512*8 = 4096)。要如何把 virtual address 轉換成 physical address？CPU[1] 會做下面步驟[2]：
 
 [img](#)
 
-1. Get the address of the P4 table from the CR3 register
-2. Use bits 39-47 (9 bits) as an index into P4 (2^9 = 512 = number of entries)
-3. Use the following 9 bits as an index into P3
-4. Use the following 9 bits as an index into P2
-5. Use the following 9 bits as an index into P1
-6. Use the last 12 bits as page offset (2^12 = 4096 = page size)
+1. 從 CR3 暫存器中得到 P4 table 的位址
+2. 把 virtual address 中第 39-47 (9 bits) 個 bits 作為引索查詢 P4 (2^9 = 512 = entries 的數量)
+3. 把 virtual address 中接下來 9 個 bits 作為引索查詢 P3
+4. 把 virtual address 中接下來 9 個 bits 作為引索查詢 P2
+5. 把 virtual address 中接下來 9 個 bits 作為引索查詢 P1
+6. 最後再把剩下的 12 個 bits 當作 page offset (2^12 = 4096 = page 大小)
 
-But what happens to bits 48-63 of the 64-bit virtual address? Well, they can't be used. The “64-bit” long mode is in fact just a 48-bit mode. The bits 48-63 must be copies of bit 47, so each valid virtual address is still unique. For more information see Wikipedia.
+在 64-bit virtual address 中，你一定會發現第 48-63 bits 沒有被提到，這是因為他們不會被用到。一般常說的 "64-bit" long mode 更正確來講其實是一個 48-bit mode，對於第 48-63 bits 的值全部都跟第 47 bit 一樣，也因為如此所有合法的 virtual address 都是唯一。更多資訊請參考 Wikipedia。
 
-An entry in the P4, P3, P2, and P1 tables consists of the page aligned 52-bit physical address of the frame or the next page table and the following bits that can be OR-ed in:
+在 P4、P3、P2、P1 tables 中的 entry 可切分成 52-bit 和剩下的 12 bit，而 52-bit 可能是存 frame (以 page 為單位，因為 page 大小可能改變) 的 physical address 或是存下一層 page table 的 physical address，所有的 bits 綜合來看：
 
-[table]
+Bit(s)  | Name                  | Meaning
+------- | --------------------- | ----------------------------------
+0       | present               | 這個 page 目前在記憶體中
+1       | writable              | 容許寫入這個 page
+2       | user accessible       | 如果沒被設定起來，只有 kernel mode code 可以存取這個 page
+3       | write through caching | 寫入會直接寫到 cache 和記憶體中
+4       | disable cache         | 這個 page 沒有使用 cache
+5       | accessed              | 當 page 被使用時，CPU 會把這個 bit 設定起來
+6       | dirty                 | 當發生寫入到這個 page 時，CPU 會把這個 bit 設定起來
+7       | huge page/null        | P1 跟 P4 的這個 bit 一定要是 0，如果被設定起來，在 P3 中就是 1GiB page，在 P2 中就是 2MiB page
+8       | global                | 在 address space 轉換下 (kernel/user)，這個 page 在 cache 中不會被清掉 (在 CR4 暫存器中 PGE bit 一定要被設定起來)
+9-11    | available             | 讓 OS 自由使用
+52-62   | available             | 讓 OS 自由使用
+63      | no execute            | 這個 page 禁止被執行 (在 EFER 暫存器中 NXE bit 一定要先被設定起來)
 
 ### Set Up Identity Paging
 
-When we switch to long mode, paging will be activated automatically. The CPU will then try to read the instruction at the following address, but this address is now a virtual address. So we need to do identity mapping, i.e. map a physical address to the same virtual address.
+當我們轉換到 long mode，paging 這個機制就會被自動啟動。所以接下來要從一個位址讀出指令來執行的這位址已經是一個 virtual address。所以我們要做 identity mapping，像是把一個 physical address 對應到 virtual address。
 
-The huge page bit is now very useful to us. It creates a 2MiB (when used in P2) or even a 1GiB page (when used in P3). So we could map the first gigabytes of the kernel with only one P4 and one P3 table by using 1GiB pages. Unfortunately 1GiB pages are relatively new feature, for example Intel introduced it 2010 in the Westmere architecture. Therefore we will use 2MiB pages instead to make our kernel compatible to older computers, too.
+```
+bootloader 一開始會把 kernel 載入到實體中，所有的資料都是用 physical address 來處理，當啟動 paging 時，只能對 virtual address 操作，但是在沒做任何設定之前，我們不知道 virtual address 怎麼對應到 physical address，因此我們要執行 identity mapping，把 physical address 對應到 virtual address。
+```
 
-To identity map the first gigabyte of our kernel with 512 2MiB pages, we need one P4, one P3, and one P2 table. Of course we will replace them with finer-grained tables later. But now that we're stuck with assembly, we choose the easiest way.
+It creates a 2MiB (when used in P2) or even a 1GiB page (when used in P3). So we could map the first gigabytes of the kernel with only one P4 and one P3 table by using 1GiB pages. Unfortunately 1GiB pages are relatively new feature, for example Intel introduced it 2010 in the Westmere architecture. Therefore we will use 2MiB pages instead to make our kernel compatible to older computers, too.
+這時候 `huge page bit` 對我們來說非常好用，他可以讓 page 大小可以是 2MiB (透過 P2) 或是 1GiB (透過 P3)。當我們想要透過一個 P4 和一個 P3 使用 1GiB page 來對應到 kernel 前 1 gigabytes 時，很不幸的 1GiB pages 是相對來的新功能，他是 Intel 在 2010 發表 Westmere 架構中提到。因此我們只能使用 2MiB pages 來讓我們所寫的 kernel 相容於更老的機器。
 
-We can add these two tables at the beginning3 of the .bss section:
+```
+我猜 kernel address space 大小剛好是 1 GiB，所以才一次 map 這麼多。
+```
+
+為了完成 identity map，我們使用了 512 個 2MiB pages 來 map kernel 前 1 gigabyte，所以我們需要一個 P4、一個 P3、一個 P2 來進行，當然我們將會之後會用更完善設計的 tables 來取代他們。但是現在，我們仍然被限制使用組合語言來完成，所以我們先要找一個簡單方法來實作。
+
+我們可以新增這兩個 tables 在 .bss section 的一開始[3]：
 
 ```
 ...
@@ -232,9 +254,9 @@ stack_bottom:
 stack_top:
 ```
 
-The resb command reserves the specified amount of bytes without initializing them, so the 8KiB don't need to be saved in the executable. The align 4096 ensures that the page tables are page aligned.
+`resb` 指令可以不用初始化方式來配置特定大小的 bytes，所以 8KiB (兩個 page table 大小) 不用一開始就儲存在 executable 中。而 align 4096 可以確保 page table 可以以 page 為單位對齊 (p4_table 位址為 4096 倍數)。
 
-When GRUB creates the .bss section in memory, it will initialize it to 0. So the p4_table is already valid (it contains 512 non-present entries) but not very useful. To be able to map 2MiB pages, we need to link P4's first entry to the p3_table and P3's first entry to the the p2_table:
+當 GRUB 把 .bss section 的記憶體建立起來的時候，他會先把記憶體初始化成 0。所以目前 `p4_table` 是可用的狀態 (他有 512 個 non-present entries)，但不是很好用。為了可以 map 2MiB pages，我們必須要把 P4 的第一個 entry 連結到 `p3_table` 的位址並且把 P3 的第一個 entry 連結到 `p2_table` 的位址。
 
 ```
 set_up_page_tables:
@@ -252,9 +274,9 @@ set_up_page_tables:
     ret
 ```
 
-We just set the present and writable bits (0b11 is a binary number) in the aligned P3 table address and move it to the first 4 bytes of the P4 table. Then we do the same to link the first P3 entry to the p2_table.
+如何做呢?我們一開始就把 P3 table 位址的 present 和 writable bits 設定起來 (因為 P3 table 有做 align 所以後面 12 bit 為 0，用來描述 page)，這部分透過 or 跟 0b11 來達成 (0b11 是一個二進位表示方式)，最後再放到 P4 table 的前 4 個 bytes。接下來我們就用一樣的步驟把 `p2_table` 的位址放到 P3 entry。
 
-Now we need to map P2's first entry to a huge page starting at 0, P2's second entry to a huge page starting at 2MiB, P2's third entry to a huge page starting at 4MiB, and so on. It's time for our first (and only) assembly loop:
+現在我們必須要 map P2 的第一個 entry 到一個較大的 page 而且起始位址是 0，而 P2 的第二個 entry 所對應的 page 起始位址為 2 MiB，P2 的第三個 entry 所對應的 page 起始位址為 4 MiB，以此類推。現在就來寫第一個 (也只有一個) 組合語言的 loop：
 
 ```
 set_up_page_tables:
@@ -276,22 +298,22 @@ set_up_page_tables:
     ret
 ```
 
-Maybe I first explain how an assembly loop works. We use the ecx register as a counter variable, just like i in a for loop. After mapping the ecx-th entry, we increase ecx by one and jump to .map_p2_table again if it's still smaller 512.
+這邊我先解釋一下如何用組合語言實作 loop，我們使用 ecx 暫存器來當作記數的變數，就像 for loop 中 i 變數的角色。當把第 ecx 個 entry 做完對應之後，我們會把 ecx 加一，如果 ecx 小於 512 的話，那就跳到 .map_p2_table 繼續做對應。
 
-To map a P2 entry we first calculate the start address of its page in eax: The ecx-th entry needs to be mapped to ecx * 2MiB. We use the mul operation for that, which multiplies eax with the given register and stores the result in eax. Then we set the present, writable, and huge page bits and write it to the P2 entry. The address of the ecx-th entry in P2 is p2_table + ecx * 8, because each entry is 8 bytes large.
+為了找到 P2 entry 所對應的位址，所以我們要去計算所對應的 page 的起始位置，然後放在 eax 暫存器中：基本上第 ecx 個 entry 所對應到的位址為 ecx * 2MiB，我們會需要用到 mul 指令，他會將給定的暫存器乘上 eax 並且將結果存在 eax 中。接下我們把 present、writable、huge page bits 設定起來，最後再寫進 P2 entry，而 P2 的第 ecx 個 entry 的位址就是 p2_table + ecx * 8，因為每個 entry 大小是 8 bytes。
 
-Now the first gigabyte (512 * 2MiB) of our kernel is identity mapped and thus accessible through the same physical and virtual addresses.
+現在我們已經 identity map kernel 的第一個 gigabyte (512 * 2MiB)，而且對於存取來說 physical address 跟 virtual address 是一致的。
 
 ### Enable Paging
 
-To enable paging and enter long mode, we need to do the following:
+要開啟 paging 並且進入到 long mode，我們需要以下步驟：
 
-1. write the address of the P4 table to the CR3 register (the CPU will look there, see the paging section)
-2. long mode is an extension of Physical Address Extension (PAE), so we need to enable PAE first
-3. Set the long mode bit in the EFER register
-4. Enable Paging
+1. 把 P4 table 的位址寫進 CR3 暫存器 (CPU 會去用到這個暫存器，忘記可以回頭看 paging 那一段)
+2. long mode 是 Physical Address Extension (PAE) 機制的延伸，所以我們要先啟動 PAE
+3. 把在 EFER 暫存器中的 long mode bit 設定起來
+4. 啟動 Paging
 
-The assembly function looks like this (some boring bit-moving to various registers):
+用組合語言寫成的 function 會像這樣 (一些對於不同暫存器的 bit 處理)：
 
 ```
 enable_paging:
@@ -318,9 +340,9 @@ enable_paging:
     ret
 ```
 
-The or eax, 1 << X is a common pattern. It sets the bit X in the eax register (<< is a left shift). Through rdmsr and wrmsr it's possible to read/write to the so-called model specific registers at address ecx (in this case ecx points to the EFER register).
+or eax, 1 << X 是一個常見的做法，他把暫存器的第 X bit (從 0 開始) 設定起來 (<< 是一個 left shift 的操作)。透過 rdmsr 和 wrmsr 我們可以去讀或寫 model specific registers，其中這兩道指令會使用到 ecx 指到我們要讀寫的 msr，然後使用 eax 來讀出或寫到 msr (在這邊 ecx 是指到 EFER 暫存器)。 
 
-Finally we need to call our new functions in start:
+最後，我們在 start 呼叫剛剛所寫的 function：
 
 ```
 ...
@@ -340,7 +362,7 @@ start:
 ...
 ```
 
-To test it we execute make run. If the green OK is still printed, we have successfully enabled paging!
+如果要測試是否成功，就看有沒有印出綠色的 OK，如果有那麼我們就是成功的啟動 paging 了！
 
 ### The Global Descriptor Table
 
