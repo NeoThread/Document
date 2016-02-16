@@ -223,15 +223,13 @@ Bit(s)  | Name                  | Meaning
 
 當我們轉換到 long mode，paging 這個機制就會被自動啟動。所以接下來要從一個位址讀出指令來執行的這位址已經是一個 virtual address。所以我們要做 identity mapping，像是把一個 physical address 對應到 virtual address。
 
-```
-bootloader 一開始會把 kernel 載入到實體中，所有的資料都是用 physical address 來處理，當啟動 paging 時，只能對 virtual address 操作，但是在沒做任何設定之前，我們不知道 virtual address 怎麼對應到 physical address，因此我們要執行 identity mapping，把 physical address 對應到 virtual address。
-```
+	譯者表示：
+	bootloader 一開始會把 kernel 載入到實體中，所有的資料都是用 physical address 來處理，當啟動 paging 時，只能對 virtual address 操作，但是在沒做任何設定之前，我們不知道 virtual address 怎麼對應到 physical address，因此我們要執行 identity mapping，把 physical address 對應到 virtual address。
 
-這時候 `huge page bit` 對我們來說非常好用，他可以讓 page 大小可以是 2MiB (透過 P2) 或是 1GiB (透過 P3)。當我們想要透過一個 P4 和一個 P3 使用 1GiB page 來對應到 kernel 前 1 gigabytes 時，很不幸的 1GiB pages 是相對來的新功能，他是 Intel 在 2010 發表 Westmere 架構中提到。因此我們只能使用 2MiB pages 來讓我們所寫的 kernel 相容於更老的機器。
+這時候 `huge page bit` 對我們來說非常好用，他可以讓 page 大小可以是 2MiB (透過 P2) 或是 1GiB (透過 P3)。當我們想要透過一個 P4 和一個 P3 使用 1GiB page 來對應到 kernel 前 1 gigabytes 時，很不幸的 1GiB pages 是相對來的新功能，他是 Intel 在 2010 發表 [Westmere](https://en.wikipedia.org/wiki/Westmere_(microarchitecture)#Technology) 架構中提到。因此我們只能使用 2MiB pages 來讓我們所寫的 kernel 相容於更老的機器。
 
-```
-我猜 kernel address space 大小剛好是 1 GiB，所以才一次 map 這麼多。
-```
+	譯者表示：
+	我猜 kernel address space 大小剛好是 1 GiB，所以才一次 map 這麼多。
 
 為了完成 identity map，我們使用了 512 個 2MiB pages 來 map kernel 前 1 gigabyte，所以我們需要一個 P4、一個 P3、一個 P2 來進行，當然我們將會之後會用更完善設計的 tables 來取代他們。但是現在，我們仍然被限制使用組合語言來完成，所以我們先要找一個簡單方法來實作。
 
@@ -253,9 +251,9 @@ stack_bottom:
 stack_top:
 ```
 
-`resb` 指令可以不用初始化方式來配置特定大小的 bytes，所以 8KiB (兩個 page table 大小) 不用一開始就儲存在 executable 中。而 align 4096 可以確保 page table 可以以 page 為單位對齊 (p4_table 位址為 4096 倍數)。
+`resb` 指令可以不用初始化方式來配置特定大小的 bytes，所以 8KiB (兩個 page table 大小) 不用一開始就儲存在 executable 中。而 `align 4096` 可以確保 page table 可以以 page 為單位對齊 (p4_table 位址為 4096 倍數)。
 
-當 GRUB 把 .bss section 的記憶體建立起來的時候，他會先把記憶體初始化成 0。所以目前 `p4_table` 是可用的狀態 (他有 512 個 non-present entries)，但不是很好用。為了可以 map 2MiB pages，我們必須要把 P4 的第一個 entry 連結到 `p3_table` 的位址並且把 P3 的第一個 entry 連結到 `p2_table` 的位址。
+當 GRUB 把 `.bss` section 的記憶體建立起來的時候，他會先把記憶體初始化成 `0`。所以目前 `p4_table` 是可用的狀態 (他有 512 個 non-present entries)，但不是很好用。為了可以 map 2MiB pages，我們必須要把 P4 的第一個 entry 連結到 `p3_table` 的位址並且把 P3 的第一個 entry 連結到 `p2_table` 的位址。
 
 ```
 set_up_page_tables:
@@ -273,7 +271,7 @@ set_up_page_tables:
     ret
 ```
 
-如何做呢?我們一開始就把 P3 table 位址的 present 和 writable bits 設定起來 (因為 P3 table 有做 align 所以後面 12 bit 為 0，用來描述 page)，這部分透過 or 跟 0b11 來達成 (0b11 是一個二進位表示方式)，最後再放到 P4 table 的前 4 個 bytes。接下來我們就用一樣的步驟把 `p2_table` 的位址放到 P3 entry。
+如何做呢?我們一開始就把 P3 table 位址的 present 和 writable bits 設定起來 (因為 P3 table 有做 align 所以後面 12 bit 為 0，用來描述 page)，這部分透過 or 跟 `0b11` 來達成 (`0b11` 是一個二進位表示方式)，最後再放到 P4 table 的前 4 個 bytes。接下來我們就用一樣的步驟把 `p2_table` 的位址放到 P3 entry。
 
 現在我們必須要 map P2 的第一個 entry 到一個較大的 page 而且起始位址是 0，而 P2 的第二個 entry 所對應的 page 起始位址為 2 MiB，P2 的第三個 entry 所對應的 page 起始位址為 4 MiB，以此類推。現在就來寫第一個 (也只有一個) 組合語言的 loop：
 
@@ -297,9 +295,9 @@ set_up_page_tables:
     ret
 ```
 
-這邊我先解釋一下如何用組合語言實作 loop，我們使用 ecx 暫存器來當作記數的變數，就像 for loop 中 i 變數的角色。當把第 ecx 個 entry 做完對應之後，我們會把 ecx 加一，如果 ecx 小於 512 的話，那就跳到 .map_p2_table 繼續做對應。
+這邊我先解釋一下如何用組合語言實作 loop，我們使用 `ecx` 暫存器來當作記數的變數，就像 for loop 中 `i` 變數的角色。當把第 `ecx` 個 entry 做完對應之後，我們會把 `ecx` 加一，如果 ecx 小於 512 的話，那就跳到 `.map_p2_table` 繼續做對應。
 
-為了找到 P2 entry 所對應的位址，所以我們要去計算所對應的 page 的起始位置，然後放在 eax 暫存器中：基本上第 ecx 個 entry 所對應到的位址為 ecx * 2MiB，我們會需要用到 mul 指令，他會將給定的暫存器乘上 eax 並且將結果存在 eax 中。接下我們把 present、writable、huge page bits 設定起來，最後再寫進 P2 entry，而 P2 的第 ecx 個 entry 的位址就是 p2_table + ecx * 8，因為每個 entry 大小是 8 bytes。
+為了找到 P2 entry 所對應的位址，所以我們要去計算所對應的 page 的起始位置，然後放在 `eax` 暫存器中：基本上第 `ecx` 個 entry 所對應到的位址為 `ecx * 2MiB`，我們會需要用到 `mul` 指令，他會將給定的暫存器乘上 `eax` 並且將結果存在 `eax` 中。接下我們把 `present`、`writable`、`huge page` bits 設定起來，最後再寫進 P2 entry，而 P2 的第 `ecx` 個 entry 的位址就是 `p2_table + ecx * 8`，因為每個 entry 大小是 8 bytes。
 
 現在我們已經 identity map kernel 的第一個 gigabyte (512 * 2MiB)，而且對於存取來說 physical address 跟 virtual address 是一致的。
 
@@ -307,8 +305,8 @@ set_up_page_tables:
 
 要開啟 paging 並且進入到 long mode，我們需要以下步驟：
 
-1. 把 P4 table 的位址寫進 CR3 暫存器 (CPU 會去用到這個暫存器，忘記可以回頭看 paging 那一段)
-2. long mode 是 Physical Address Extension (PAE) 機制的延伸，所以我們要先啟動 PAE
+1. 把 P4 table 的位址寫進 CR3 暫存器 (CPU 會去用到這個暫存器，忘記可以回頭看 [paging 那一段](http://os.phil-opp.com/entering-longmode.html#paging))
+2. long mode 是 [Physical Address Extension](https://en.wikipedia.org/wiki/Physical_Address_Extension) (PAE) 機制的延伸，所以我們要先啟動 PAE
 3. 把在 EFER 暫存器中的 long mode bit 設定起來
 4. 啟動 Paging
 
@@ -339,9 +337,9 @@ enable_paging:
     ret
 ```
 
-or eax, 1 << X 是一個常見的做法，他把暫存器的第 X bit (從 0 開始) 設定起來 (<< 是一個 left shift 的操作)。透過 rdmsr 和 wrmsr 我們可以去讀或寫 model specific registers，其中這兩道指令會使用到 ecx 指到我們要讀寫的 msr，然後使用 eax 來讀出或寫到 msr (在這邊 ecx 是指到 EFER 暫存器)。 
+`or eax, 1 << X` 是一個常見的做法，他把暫存器的第 `X` bit (從 0 開始) 設定起來 (`<<` 是一個 left shift 的操作)。透過 `rdmsr` 和 `wrmsr` 我們可以去讀或寫 model specific registers，其中這兩道指令會使用到 `ecx` 指到我們要讀寫的 msr，然後使用 `eax` 來讀出或寫到 msr (在這邊 `ecx` 是指到 EFER 暫存器)。 
 
-最後，我們在 start 呼叫剛剛所寫的 function：
+最後，我們在 `start` 呼叫剛剛所寫的 function：
 
 ```
 ...
@@ -361,11 +359,11 @@ start:
 ...
 ```
 
-如果要測試是否成功，就看有沒有印出綠色的 OK，如果有那麼我們就是成功的啟動 paging 了！
+如果要測試是否成功，我們執行 `make run`，就看有沒有印出綠色的 OK，如果有那麼我們就是成功的啟動 paging 了！
 
 ### The Global Descriptor Table
 
-在啟動完 Paging 之後，processor 就會在 long mode 中。所以我們現在可以使用 64-bit 指令，對吧？答案是錯的。processor 現在仍然在 32-bit 相容的 submode。為了要真正可以執行 64-bit 的程式碼，我們必須要去設定一個新的 Global Descriptor Table。Global Descriptor Table 在以前的作業系統是用在 Segmentation 上，在這邊我不會解釋太多關於 Segmentation，但是在 Three Easy Pieces OS 書中有更詳細的介紹 (PDF)。
+在啟動完 Paging 之後，processor 就會在 long mode 中。所以我們現在可以使用 64-bit 指令，對吧？答案是錯的。processor 現在仍然在 32-bit 相容的 submode。為了要真正可以執行 64-bit 的程式碼，我們必須要去設定一個新的 Global Descriptor Table。Global Descriptor Table 在以前的作業系統是用在 Segmentation 上，在這邊我不會解釋太多關於 Segmentation，但是在 [Three Easy Pieces OS](http://pages.cs.wisc.edu/~remzi/OSTEP/) 書中有更詳細的介紹 ([PDF](http://pages.cs.wisc.edu/~remzi/OSTEP/vm-segmentation.pdf))。
 
 在今日大部分都是使用 Paging 而不是 Segmentation (我們也是如此)。但是在 x86 架構中，仍然是需要 GDT，即使你沒有用到 Segmentation。GRUB 在一開始會建立一個 32-bit GDT，但我們現在需要轉成 long mode 的 GDT。
 
@@ -380,7 +378,7 @@ Bit(s)  | Name                 | Meaning
 42      | direction/conforming | 對於 data segments，這個 bit 被設定起來的話，代表資料是往下長 (舉例來說： base>limit) / 對於 code segments，這個 bit 被設定起來，current privilege level (像是 3 or 1) 可以大於等於 code segments 中所定義的 level (像是 1) (否則要相等才能執行) 
 43      | executable           | 當這個 bit 被設定起來時，他就是一個 code segment，否則只是一個 data segment
 44      | descriptor type      | 如果是 code segments 或是 data segments，這個 bit 會是 1
-45-46   | privilege            | [ring level]： 0 是 kernel，3 是 user
+45-46   | privilege            | [ring level](http://wiki.osdev.org/Security#Rings)： 0 是 kernel，3 是 user
 47      | present              | 當這個 bit 為 1 時，表示這是個可用的 Selector
 48-51   | limit 16-19          | 這是 segment 的 limit 第 16-19 bits
 52      | available            | 給 OS 自由使用
@@ -399,11 +397,11 @@ gdt64:
     dq (1<<44) | (1<<47) | (1<<41) ; data segment
 ```
 
-這裡我們選擇使用 .rodata section 是因為他只需要被初始化成唯讀的資料，dq 指令代表著 define quad (兩倍的 double 大小)，然後配置 64-bit 常數 (跟 dw 和 dd 使用方式很像)，然後 (1<<44) 是做 bit shift 操作，為的是把第 44 bit 設定起來 (從 0 開始算)。
+這裡我們選擇使用 `.rodata` section 是因為他只需要被初始化成唯讀的資料，`dq` 指令代表著 `define quad` (兩倍的 double 大小)，然後配置 64-bit 常數 (跟 `dw` 和 `dd` 使用方式很像)，然後 (`1<<44`) 是做 [bit shift](http://www.cs.umd.edu/class/sum2003/cmsc311/Notes/BitOp/bitshift.html) 操作，為的是把第 44 bit 設定起來 (從 0 開始算)。
 
 ### Loading the GDT
 
-接下要載入寫好的 64-bit GDT，我們必須要把他的位址和長度告訴 CPU。如何達成呢？我們設計一個特別 pointer 結構，再把這個 pointer 的記憶體位址傳給 lgdt (load GDT) 指令。
+接下要載入寫好的 64-bit GDT，我們必須要把他的位址和長度告訴 CPU。如何達成呢？我們設計一個特別 pointer 結構，再把這個 pointer 的記憶體位址傳給 `lgdt` (load GDT) 指令。
 
 而 pointer 結構如下：
 
@@ -416,9 +414,9 @@ gdt64:
     dq gdt64
 ```
 
-前 2 bytes 為 (GDT 長度 -1)，$ 是一個特別的 symbol 會被取代成目前位址 (在這個例子中，它等同於 .pointer 位址)。接下來 8 bytes 為 GDT 位址。Labels 如果開頭是一個點 (像是 .pointer) 就是 sub-labels (子 label)，至於是誰的 sub-labels？就看前面最近且開頭沒有點的 label。當要使用 sub-label 的話，那麼 sub-label 的前面必須要有父 label (像是 gdt64.pointer)。
+前 2 bytes 為 (GDT 長度 -1)，`$` 是一個特別的 symbol 會被取代成目前位址 (在這個例子中，它等同於 `.pointer` 位址)。接下來 8 bytes 為 GDT 位址。Labels 如果開頭是一個點 (像是 `.pointer`) 就是 sub-labels (子 label)，至於是誰的 sub-labels？就看前面最近且開頭沒有點的 label。當要使用 sub-label 的話，那麼 sub-label 的前面必須要有父 label (像是 `gdt64.pointer`)。
 
-現在我們可以在 start 中把 GDT 載入進來：
+現在我們可以在 `start` 中把 GDT 載入進來：
 
 ```
 start:
@@ -432,13 +430,7 @@ start:
     ...
 ```
 
-When you still see the green OK, everything went fine and the new GDT is loaded.
-如果你有看到螢幕上印出綠色 OK，那麼到目前為止一切正常，而且新的 GDT 已經載入了。
-But we still can't execute 64-bit code: The selector registers such as the code selector cs and the data selector ds still have the values from the old GDT.
-但是我們仍然不能執行 64-bit 程式碼：selector 暫存器 (像是 code selector cs 和 data selector ds) 裡面的仍然是從舊的 GDT 所得到的值，所以我們必須去更新他們，把 GDT 中 segment selector 的 offset (單位為 bytes) 載入到相對應暫存器中。
-To update them, we need to load them with the GDT offset (in bytes) of the desired segment.
-In our case the code segment starts at byte 8 of the GDT and the data segment at byte 16. Let's try it:
-在這裡 code segment 是在 GDT 第 8 byte 的位址而 data segment 是第 16 byte 的位址，現在就來試看看：
+如果你有看到螢幕上印出綠色 `OK`，那麼到目前為止一切正常，而且新的 GDT 已經載入了。但是我們仍然不能執行 64-bit 程式碼：因為 selector 暫存器 (像是 code selector `cs` 和 data selector `ds`) 裡面的仍然是從舊的 GDT 所得到的值，所以我們必須去更新他們，把 GDT 中 segment selector 的 offset (單位為 bytes) 載入到相對應暫存器中。在這裡 code segment 是在 GDT 第 8 byte 的位址而 data segment 是第 16 byte 的位址，現在就來試看看：
 
 ```
     ...
@@ -454,16 +446,7 @@ In our case the code segment starts at byte 8 of the GDT and the data segment at
     ...
 ```
 
-It should still work.
-目前應該還是可以執行的。
-The segment selectors are only 16-bits large, so we use the 16-bit ax subregister.
-segment selectors 的大小只有 16-bits，所以我們使用 16-bit ax subregister (部分暫存器)。
-Notice that we didn't update the code selector cs.
-注意到我們並沒有更新 code selector cs。
-We will do that later.
-這部分我們晚點再作。
-First we should replace this hardcoded 16 by adding some labels to our GDT:
-我們先把寫死的 16 (cs offset) 改成彈性的寫法，這部分是在 GDT 新增一些 labels 來完成： 
+目前應該還是可以執行的。segment selectors 的大小只有 16-bits，所以我們使用 16-bit `ax` subregister (部分的暫存器)。注意這邊我們並沒有更新 code selector `cs`，這部分我們晚點再作，我們先把寫死的 `16` (cs offset) 改成彈性的寫法，作法是在 GDT 新增一些 labels 來完成： 
 
 ```
 section .rodata
@@ -477,23 +460,9 @@ gdt64:
     ...
 ```
 
-We can't just use normal labels here, as we need the table offset.
-為了求出 table offset，這邊我們不能用普通的 labels。
-We calculate this offset using the current address $ and set the labels to this value using equ.
-我們使用當前位址 $ 來計算 offset 並且使用 equ 指令將 labels 設為這個值。
-Now we can use gdt64.data instead of 16 and gdt64.code instead of 8 and these labels will still work if we modify the GDT.
-現在我們可以使用 gdt64.data 來取代 16，接著使用 gdt64.code 來取代 8，而且當我們去修改 GDT 的時候，我們不必去更新這些 labels。
+為了求出 table offset，這邊我們不能用普通的 labels。我們使用當前位址 `$` 來計算 offset 並且使用 [equ](http://www.nasm.us/doc/nasmdoc3.html#section-3.2.4) 指令將 labels 設為這個值。現在我們可以使用 `gdt64.data` 來取代 16，接著使用 `gdt64.code` 來取代 8，而且當我們去修改 GDT 的時候，我們不必去更新這些 labels。
 
-Now there is just one last step left to enter the true 64-bit mode: We need to load cs with gdt64.code.
-現在就剩最後一步來進入真的 64-bit mode：我們需要把 gdt64.code 載入到 cs 暫存器中。
-But we can't do it through mov.
-但在這裡我們不能用 mov 指令來做。
-The only way to reload the code selector is a far jump or a far return.
-更新 code selector 的唯一的做法就是使用 far jump 指令或是 far return 指令。
-These instructions work like a normal jump/return but change the code selector.
-這兩個指令的用法就跟一般的 jump/return 差不多，但是他們會去更新 code selector。
-We use a far jump to a long mode label:
-所以我們使用 far jump 指令跳到一個 long mode 的 label： 
+現在就剩最後一步來進入真的 64-bit mode：我們需要把 `gdt64.code` 載入到 `cs` 暫存器中。但在這裡我們不能用 `mov` 指令來做，更新 code selector 的唯一的做法就是使用 far jump 指令或是 far return 指令。這兩個指令的用法就跟一般的 jump/return 差不多，但是他們會去更新 code selector，所以這裡我們使用 far jump 指令跳到一個 long mode 的 label： 
 
 ```
 global start
@@ -513,15 +482,9 @@ start:
 ...
 ```
 
-The actual long_mode_start label is defined as extern, so it's part of another file.
-實際上 long_mode_start label 是被定義成 extern，所以這個 label 會在另外一個檔案中。
-The jmp gdt64.code:long_mode_start is the mentioned far jump.
-jmp gdt64.code:long_mode_start 就是剛剛提到的 far jump。
+實際上 `long_mode_start` label 是被定義成 `extern`，所以這個 label 會在另外一個檔案中。`jmp gdt64.code:long_mode_start` 就是剛剛提到的 far jump。
 
-I put the 64-bit code into a new file to separate it from the 32-bit code, thereby we can't call the (now invalid) 32-bit code accidentally.
-接下來我把 64-bit 程式碼放到新的檔案，藉此來區隔 32-bit 程式碼，因此我們已經不能在呼叫 (現在已經失效) 32-bit 程式碼。
-The new file (I named it long_mode_init.asm) looks like this:
-而新的檔案 (我把它命名成 long_mode_init.asm) 長的會像是如此：
+接下來我把 64-bit 程式碼放到新的檔案，藉此來區隔 32-bit 程式碼，因此我們已經不能在呼叫 (現在已經失效) 32-bit 程式碼。而新的檔案 (我把它命名成 `long_mode_init.asm`) 長的會像是如此：
 
 ```
 global long_mode_start
@@ -535,45 +498,24 @@ long_mode_start:
     hlt
 ```
 
-You should see a green OKAY on the screen. Some notes on this last step:
-你應該會看到綠色的 OKAY 印在螢幕上。這邊對於最後步驟做些筆記：
+你應該會看到綠色的 `OKAY` 印在螢幕上。這邊對於最後步驟做些筆記：
 
-* As the CPU expects 64-bit instructions now, we use bits 64
-* 因為 CPU 會希望接下來是 64-bit 指令，所以我們使用 bits 64
-* We can now use the extended registers. Instead of the 32-bit eax, ebx, etc. we now have the 64-bit rax, rbx, …
-* 我們現在要使用的是已擴充的暫存器，而不是 32-bit eax、ebx、ecx 等等，我們現在所使用的是 64-bit rax、rbx、…
-* and we can write these 64-bit registers directly to memory using mov qword (quad word)
-* 而且我們可以用 mov qword (quad word) 直接把 64-bit 暫存器的值寫到記憶體中。
+* 因為 CPU 會希望接下來是 64-bit 指令，所以我們使用 `bits 64`
+* 我們現在要使用的是已擴充的暫存器，而不是 32-bit `eax`、`ebx` 等等，我們現在所使用的是 64-bit `rax`、`rbx`、…
+* 而且我們可以用 `mov qword` (quad word) 直接把 64-bit 暫存器的值寫到記憶體中。
 
-Congratulations! You have successfully wrestled through this CPU configuration and compatibility mode mess :).
 恭喜你已經成功完成了 CPU 的設定以及相容模式的轉換 :)。
 
 ### What's next?
 
-It's time to finally leave assembly behind4 and switch to some higher level language.
-下一步我們改用一些更高階的語言而不只是組合語言[4]。
-We won't use C or C++ (not even a single line).
-但這裡我們不會用 C or C++ (不是一行程式可以表達)
-Instead we will use the relatively new Rust language.
-我們會用相對來的新的語言 Rust。
-It's a systems language without garbage collections but with guaranteed memory safety.
-他是一個系統程式語言，沒有 garbage collections (記憶體垃圾回收)，但保證安全使用記憶體。
-Through a real type system and many abstractions it feels like a high-level language but can still be low-level enough for OS development.
-對於一個真正的系統上和許多抽象的層面來說，他是一個高階的程式語言，但是對於開發 OS 來說，仍然很底層。
-The next post describes the Rust setup.
-下一篇會描述如何安裝 Rust。
+下一步我們改用一些更高階的語言而不只是組合語言[4]。但這裡我們不會用 C or C++ (不是一行程式可以表達)，我們會用相對來的新的語言 [Rust](https://www.rust-lang.org/)，他是一個系統程式語言，沒有 garbage collections (記憶體垃圾回收)，但保證安全使用記憶體。對於一個真正的系統上和許多抽象的層面來說，他是一個高階的程式語言，但是對於開發 OS 來說，仍然很底層。[下一篇](http://os.phil-opp.com/set-up-rust.html)會描述如何安裝 Rust。
 
 ---
 
-1. In the x86 architecture, the page tables are hardware walked, so the CPU will look at the table on its own when it needs a translation. Other architectures, for example MIPS, just throw an exception and let the OS translate the virtual address.
 1. 在 x86 架構中，page tables 的運作是透過硬體來執行，所以當 CPU 需要位址轉換時，他會去查看自己的 table。而其他架構中，舉例來說 MIPS，就只是丟出 exception 然後讓 OS 去轉換 virtual address。
  
-2. Image source: Wikipedia, with modified font size, page table naming, and removed sign extended bits. The modified file is licensed under the Creative Commons Attribution-Share Alike 3.0 Unported license.
-2. 圖片來源：Wikipedia，有做過字體大小修改，page table 重新命名，並且移除 sign extended bits。而這個修改過後的檔案受到 Creative Commons Attribution-Share Alike 3.0 Unported license 保護。
+2. 圖片來源：[Wikipedia](https://commons.wikimedia.org/wiki/File:X86_Paging_64bit.svg)，有做過字體大小修改，page table 重新命名，並且移除 sign extended bits。而這個修改過後的檔案受到 Creative Commons Attribution-Share Alike 3.0 Unported license 保護。
 
-3. Page tables need to be page-aligned as the bits 0-11 are used for flags.
-By putting these tables at the beginning of .bss, the linker can just page align the whole section and we don't have unused padding bytes in between.
-3. Page tables 的位址是需要 page-aligned (0, 4k, 8k)，這是因為 page table 的 entry 第 0-11 bits 被用來當作 flags。把這些 tables 放在 .bss 的一開始的位址，linker (連結器) 會用 page-aligned 方式來看整個 section，所以之間不會沒有用到的地方。
+3. Page tables 的位址是需要 page-aligned (0, 4k, 8k)，這是因為 page table 的 entry 第 0-11 bits 被用來當作 flags。把這些 tables 放在 `.bss` 的一開始的位址，linker (連結器) 會用 page-aligned 方式來看整個 section，所以之間不會沒有用到的地方。
 
-4. Actually we will still need some assembly in the future, but I'll try to minimize it.
 4. 實際上我們未來還需要一些組合語言，但我會盡量避免使用。
