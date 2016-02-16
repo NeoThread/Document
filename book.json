@@ -1,0 +1,32 @@
+{
+		"gitbook": ">=2.1.0", 
+    "output": null,
+    "generator": "site",
+    "title": null,
+    "description": null,
+    "extension": null,
+    "github": null,
+    "githubHost": "https://github.com/",
+    "plugins": ["plantuml","mathjax","expandable-chapters","mermaid"],
+    "pluginsConfig": {
+        "expandable-chapters":{},
+        "mathjax":{
+            "forceSVG": false
+        }
+    },
+    "styles": {
+        "website": "assets/styles/website.css"
+    },
+    "links": {
+        "sidebar": {
+            "Home": "http://neothread.com"
+        },
+        "sharing": {
+            "google": false,
+            "facebook": false,
+            "twitter": false,
+            "weibo": false,
+            "all": false
+        }
+    }
+}
